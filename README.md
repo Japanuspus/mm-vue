@@ -1,2 +1,3 @@
 # mm-vue
-A mastermind-implementation in Vue/Vuetify
+
+A mastermind implementation in Vue/Vuetify

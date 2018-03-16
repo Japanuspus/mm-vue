@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Masterminder</title>
+    <link href='https://fonts.googleapis.com/css?family=Roboto:300,400,500,700|Material+Icons' rel="stylesheet">
+    <link href="https://unpkg.com/vuetify/dist/vuetify.min.css" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, minimal-ui">
+</head>
+<body>
+<v-app id="app">
+  <v-container fluid>
+    <h2>Masterminder </h2>
+    <row-guess :cfg="cfg" @pegs="addGuess($event)" row></row-guess>
+    <board-row :cfg="cfg" v-for="(row, index) in rows" :row="row" :key="'board-row'+index"></board-row>
+
+    <v-layout row>
+      <v-flex sm2><v-btn color="warning" @click="revealSecret()">Reveal</v-btn></v-flex>
+      <v-flex sm2><v-btn color="warning" @click="newGame()">New Game</v-btn></v-flex>
+    </v-layout>
+  </v-container>
+</v-app>
+
+<script src="https://cdn.jsdelivr.net/npm/lodash@4.17.5/lodash.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/vue@2.5.16/dist/vue.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/vuetify@1.0.8/dist/vuetify.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/http-vue-loader@1.3.4/src/httpVueLoader.js"></script>
+<script type="text/javascript">
+
+Vue.component('peg', {
+  name: 'peg',
+  template: '\
+    <v-avatar :color="cfg.colors[color-1]">\
+      <span v-if="cfg.show_number" class="cfg.colors[color-1]--text headline">{{ color }}</span>\
+    </v-avatar>',
+  props: {
+    color: {type: Number, required: true},
+    cfg: {type: Object, required: true}
+  }
+});
+
+Vue.component('peg-select', {
+  template: '\
+    <v-select append-icon="" chips :items="_.range(1, 1+cfg.n_color)" :value="value" @input="updateValue($event)">\
+      <template slot="item" slot-scope="data"><peg :cfg="cfg" :color="data.item"></peg></template>\
+      <template slot="selection" slot-scope="data"><peg :cfg="cfg" :color="data.item"></peg></template>\
+    </v-select>',
+  props: {
+    value: {type: Number, default: 1},
+    cfg: {type: Object, required: true}
+  },
+  methods: {
+    updateValue: function (value) {
+      console.log('from peg-select: '+value);
+      this.$emit('input', value);
+    }
+  }
+});
+
+Vue.component('row-guess', {
+  template: '\
+    <v-layout>\
+      <v-flex v-for="k in cfg.n_peg" :key="id+k" sm1>\
+        <peg-select  :cfg="cfg" v-model="pegs[k-1]"></peg-select>\
+      </v-flex>\
+      <v-btn color="ok" @click="submitRow()" sm1>Go!</v-btn>\
+    </v-layout>',
+  data: function () { return {
+    id: _.uniqueId('row_guess'),
+    pegs: Array(this.cfg.n_peg).fill(1)
+  }},
+  props: {
+    cfg: {type: Object, required: true}
+  },
+  methods: {
+    submitRow: function() {
+      var active_pegs=this.pegs.slice(0,this.cfg.n_peg);
+      this.$emit('pegs', active_pegs);
+    }
+  }
+});
+
+Vue.component('board-row',{
+  template: '\
+  <v-layout row>\
+    <v-flex v-for="(c, index) in row.pegs" :key="id+index" sm1>\
+      <peg  :cfg="cfg" :color="c"></peg>\
+    </v-flex>\
+    <v-flex sm2>{{row.answer}}</v-flex>\
+  </v-layout>',
+  props: {
+    cfg: {type: Object, required: true},
+    row: {type: Object, required: true}
+  },
+  data: function() {return {
+    id: _.uniqueId('board-row')
+  }}
+});
+
+// returns tuple: (number of exact matches, number of color matches)
+var colorCompare=function(araw,braw) {
+  var exact_matches=araw.map(function(v,i) {return v==braw[i];}).reduce((x,y)=> x+y);
+  // compute total matches
+  var ct=0; 
+  var a=araw.slice(0).sort(); // sorted copy of input
+  var b=braw.slice(0).sort();
+  while (a.length>0 && b.length>0) {
+    if (a[0]<b[0]) {
+      a.shift();
+    } else {
+      if (b[0]<a[0]) {
+        b.shift();  
+      } else {
+        a.shift();
+        b.shift();
+        ct+=1;
+      }
+    }
+  }
+  return {
+    'exact': exact_matches, 
+    'color': ct-exact_matches
+  }
+}
+
+const newSecret=function(cfg) {
+  return Array(cfg.n_peg).fill(0).map(x => 1+Math.floor(Math.random()*cfg.n_color));
+}
+
+var vm = new Vue({
+  el: '#app',
+  data: {
+    cfg: {
+      colors: ["red", "purple", "blue", "green", "yellow", "orange", "brown", "blue-grey"],
+      show_number: true,
+      n_color: 8,
+      n_peg: 4
+    },
+    rows: [],
+    secret: newSecret({n_peg: 4, n_color: 8})
+  },
+  methods: {
+    addGuess: function(pegs) {
+      console.log('Received new guess: '+pegs);
+      this.rows.unshift({'pegs': pegs, 'answer': colorCompare(this.secret, pegs)});
+    },
+    revealSecret: function() {
+      console.log('Revealing secret');
+      this.addGuess(this.secret);
+    },
+    newGame: function() {
+      this.rows=[];
+      this.secret=newSecret(this.cfg);
+    }
+
+  }
+});
+</script>
+</body>
+</html>
+
+
+
