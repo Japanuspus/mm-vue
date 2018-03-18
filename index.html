@@ -5,20 +5,27 @@
     <title>Masterminder</title>
     <link href='https://fonts.googleapis.com/css?family=Roboto:300,400,500,700|Material+Icons' rel="stylesheet">
     <link href="https://unpkg.com/vuetify/dist/vuetify.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.0.8/css/all.css" integrity="sha384-3AB7yXWz4OeoZcPbieVW64vVXEwADiYyAEhwilzWsLw+9FgqpyjjStpPnpBO8o8S" crossorigin="anonymous">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, minimal-ui">
 </head>
 <body>
 <v-app id="app">
-  <v-container fluid>
-    <h2>Masterminder </h2>
-    <row-guess :cfg="cfg" @pegs="addGuess($event)" row></row-guess>
-    <board-row :cfg="cfg" v-for="(row, index) in rows" :row="row" :key="'board-row'+index"></board-row>
-
-    <v-layout row>
-      <v-flex sm2><v-btn color="warning" @click="revealSecret()">Reveal</v-btn></v-flex>
-      <v-flex sm2><v-btn color="warning" @click="newGame()">New Game</v-btn></v-flex>
-    </v-layout>
-  </v-container>
+  <v-container ><v-layout column>  
+  <v-flex >
+    <v-card width=600px>
+      <v-container >
+        <pegrow v-for="row in rows" :cfg="cfg" :pegs="row.pegs" :header="String(row.number)" :key="_.uniqueId()">
+          {{row.answer}}
+        </pegrow>
+        <pegrow :cfg="cfg" :pegs="gs" header=">" :allow_drop="true" v-on:drag_out="drag_out" v-on:drag_in="drag_in">
+              <v-btn v-on:click="addGuess">Go</v-btn>
+        </pegrow>
+        <pegrow :cfg="cfg" :pegs="[1,2,3,4]" header=""></pegrow>
+        <pegrow :cfg="cfg" :pegs="[5,6,7,8]" header=""></pegrow>
+      </v-container>
+    </v-card>
+  </v-flex>
+  </v-layout></v-container> 
 </v-app>
 
 <script src="https://cdn.jsdelivr.net/npm/lodash@4.17.5/lodash.min.js"></script>
@@ -27,56 +34,67 @@
 <script src="https://cdn.jsdelivr.net/npm/http-vue-loader@1.3.4/src/httpVueLoader.js"></script>
 <script type="text/javascript">
 
+//A peg: color 0 means undefined
 Vue.component('peg', {
   name: 'peg',
   template: '\
-    <v-avatar :color="cfg.colors[color-1]">\
-      <span v-if="cfg.show_number" class="cfg.colors[color-1]--text headline">{{ color }}</span>\
+    <v-avatar :color="cfg.colors[color]" class="elevation-3" style="margin:6px" draggable="true"\
+        v-on:dragstart="peg_drag($event)" v-on:dragover="peg_dragover" v-on:drop="peg_drop($event)">\
+      <span v-if="color==0" class="headline">?</span>\
+      <span v-else-if="cfg.show_number" class="cfg.colors[color]--text headline">{{ color }}</span>\
     </v-avatar>',
   props: {
     color: {type: Number, required: true},
-    cfg: {type: Object, required: true}
-  }
-});
-
-Vue.component('peg-select', {
-  template: '\
-    <v-select append-icon="" chips :items="_.range(1, 1+cfg.n_color)" :value="value" @input="updateValue($event)">\
-      <template slot="item" slot-scope="data"><peg :cfg="cfg" :color="data.item"></peg></template>\
-      <template slot="selection" slot-scope="data"><peg :cfg="cfg" :color="data.item"></peg></template>\
-    </v-select>',
-  props: {
-    value: {type: Number, default: 1},
+    drop_id: {type: Number, default: 0},  //drop_id of 0 means do not emit
     cfg: {type: Object, required: true}
   },
   methods: {
-    updateValue: function (value) {
-      console.log('from peg-select: '+value);
-      this.$emit('input', value);
+    peg_drag: function(event) {
+      drag_data={'src_drop_id': this.drop_id, 'color': this.color};
+      console.log(drag_data, event);
+      event.dataTransfer.setData("text", JSON.stringify(drag_data));
+      // allow owner to change value of this to 0.
+      if(this.drop_id>0) {
+        this.$emit('drag_out', this.drop_id);
+      }
+    },
+    peg_dragover: function(event) {
+      //default is to not accept drops: preventDefault if we have drop_id
+      if(this.drop_id) {
+        event.preventDefault();
+      } 
+    },
+    peg_drop: function(event) {
+      event.preventDefault();
+      drag_data = JSON.parse(event.dataTransfer.getData('text'));
+      drag_data.tgt_drop_id = this.drop_id;
+      console.log('got drop event: ', drag_data);
+      this.$emit('drag_in', drag_data);
     }
   }
 });
 
-Vue.component('row-guess', {
+Vue.component('pegrow', {
   template: '\
-    <v-layout>\
-      <v-flex v-for="k in cfg.n_peg" :key="id+k" sm1>\
-        <peg-select  :cfg="cfg" v-model="pegs[k-1]"></peg-select>\
-      </v-flex>\
-      <v-btn color="ok" @click="submitRow()" sm1>Go!</v-btn>\
-    </v-layout>',
+        <v-layout align-center row my-3>\
+          <v-flex sm2><v-card-text class="headline">{{ header }}</v-card-text></v-flex>\
+          <v-flex v-for="(peg,index) in pegs" :key="\'uniqueId\'+index">\
+            <peg :cfg="cfg" :color="peg" :drop_id="allow_drop?index+1:0" @drag_in="drag_in" @drag_out="drag_out"></peg>\
+          </v-flex>\
+          <v-flex sm4><slot></slot></v-flex>\
+        </v-layout>',
   data: function () { return {
-    id: _.uniqueId('row_guess'),
-    pegs: Array(this.cfg.n_peg).fill(1)
+    id: _.uniqueId('row_guess')
   }},
   props: {
-    cfg: {type: Object, required: true}
+    header: {type: String, default: ''},
+    pegs: {type: Array, required: true},
+    cfg: {type: Object, required: true},
+    allow_drop: {type: Boolean, default: false}
   },
   methods: {
-    submitRow: function() {
-      var active_pegs=this.pegs.slice(0,this.cfg.n_peg);
-      this.$emit('pegs', active_pegs);
-    }
+    drag_in: function(ev) {this.$emit('drag_in', ev);},
+    drag_out: function(ev) {this.$emit('drag_out', ev);}
   }
 });
 
@@ -131,18 +149,20 @@ var vm = new Vue({
   el: '#app',
   data: {
     cfg: {
-      colors: ["red", "purple", "blue", "green", "yellow", "orange", "brown", "blue-grey"],
+      colors: ["grey", "red", "purple", "blue", "green", "yellow", "orange", "brown", "blue-grey"],
       show_number: true,
       n_color: 8,
       n_peg: 4
     },
     rows: [],
-    secret: newSecret({n_peg: 4, n_color: 8})
+    secret: newSecret({n_peg: 4, n_color: 8}),
+    gs: Array(4).fill(0)
   },
   methods: {
-    addGuess: function(pegs) {
+    addGuess: function() {
+      var pegs = this.gs.slice(0); //copy
       console.log('Received new guess: '+pegs);
-      this.rows.unshift({'pegs': pegs, 'answer': colorCompare(this.secret, pegs)});
+      this.rows.push({'pegs': pegs, 'answer': colorCompare(this.secret, pegs), 'number': this.rows.length+1});
     },
     revealSecret: function() {
       console.log('Revealing secret');
@@ -151,8 +171,25 @@ var vm = new Vue({
     newGame: function() {
       this.rows=[];
       this.secret=newSecret(this.cfg);
+    },
+    clear_gs: function() {
+      this.gs=[3,3,3,4];
+    },
+    drag_in: function(event) {
+      console.log('drag in received: ', event);
+      var old_target_color = this.gs[event.tgt_drop_id-1];
+      this.gs[event.tgt_drop_id-1] = event.color;
+      if(event.src_drop_id>0) {
+        console.log('Assigning old color to source');
+        this.gs[event.src_drop_id-1] = old_target_color;
+      }
+      this.$forceUpdate();
+    },
+    drag_out: function(drop_id) {
+      console.log('drag out received from: ', drop_id);
+      this.gs[drop_id-1]=0;
+      this.$forceUpdate();
     }
-
   }
 });
 </script>
