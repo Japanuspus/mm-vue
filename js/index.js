@@ -1,83 +1,5 @@
-//A peg: color 0 means undefined
-Vue.component('peg', {
-  name: 'peg',
-  template: '\
-    <v-avatar :color="cfg.colors[color]" class="elevation-3" style="margin:6px" draggable="true"\
-        v-on:dragstart="peg_drag($event)" v-on:dragover="peg_dragover" v-on:drop="peg_drop($event)">\
-      <span v-if="color==0" class="headline">?</span>\
-      <span v-else-if="cfg.show_number" class="cfg.colors[color]--text headline">{{ color }}</span>\
-    </v-avatar>',
-  props: {
-    color: {type: Number, required: true},
-    drop_id: {type: Number, default: 0},  //drop_id of 0 means do not emit
-    cfg: {type: Object, required: true}
-  },
-  methods: {
-    peg_drag: function(event) {
-      var drag_data={'src_drop_id': this.drop_id, 'color': this.color};
-      console.log(drag_data, event);
-      event.dataTransfer.setData("text", JSON.stringify(drag_data));
-      // allow owner to change value of this to 0.
-      if(this.drop_id>0) {
-        this.$emit('drag_out', this.drop_id);
-      }
-    },
-    peg_dragover: function(event) {
-      //default is to not accept drops: preventDefault if we have drop_id
-      if(this.drop_id) {
-        event.preventDefault();
-      } 
-    },
-    peg_drop: function(event) {
-      event.preventDefault();
-      var drag_data = JSON.parse(event.dataTransfer.getData('text'));
-      drag_data.tgt_drop_id = this.drop_id;
-      console.log('got drop event: ', drag_data);
-      this.$emit('drag_in', drag_data);
-    }
-  }
-});
-
-Vue.component('pegrow', {
-  template: '\
-        <v-layout align-center row my-3>\
-          <v-flex sm2><v-card-text class="headline">{{ header }}</v-card-text></v-flex>\
-          <v-flex v-for="(peg,index) in pegs" :key="\'uniqueId\'+index">\
-            <peg :cfg="cfg" :color="peg" :drop_id="allow_drop?index+1:0" @drag_in="drag_in" @drag_out="drag_out"></peg>\
-          </v-flex>\
-          <v-flex sm4><slot></slot></v-flex>\
-        </v-layout>',
-  data: function () { return {
-    id: _.uniqueId('row_guess')
-  }},
-  props: {
-    header: {type: String, default: ''},
-    pegs: {type: Array, required: true},
-    cfg: {type: Object, required: true},
-    allow_drop: {type: Boolean, default: false}
-  },
-  methods: {
-    drag_in: function(ev) {this.$emit('drag_in', ev);},
-    drag_out: function(ev) {this.$emit('drag_out', ev);}
-  }
-});
-
-Vue.component('board-row',{
-  template: '\
-  <v-layout row>\
-    <v-flex v-for="(c, index) in row.pegs" :key="id+index" sm1>\
-      <peg  :cfg="cfg" :color="c"></peg>\
-    </v-flex>\
-    <v-flex sm2>{{row.answer}}</v-flex>\
-  </v-layout>',
-  props: {
-    cfg: {type: Object, required: true},
-    row: {type: Object, required: true}
-  },
-  data: function() {return {
-    id: _.uniqueId('board-row')
-  }}
-});
+import peg from '/js/components/peg.js';
+import pegrow from '/js/components/pegrow.js';
 
 // returns tuple: (number of exact matches, number of color matches)
 var colorCompare=function(araw,braw) {
@@ -111,6 +33,10 @@ const newSecret=function(cfg) {
 
 var vm = new Vue({
   el: '#app',
+  components: {
+    peg: peg,
+    pegrow: pegrow
+  },
   data: {
     cfg: {
       colors: ["grey", "red", "purple", "blue", "green", "yellow", "orange", "brown", "blue-grey"],
