@@ -12,18 +12,7 @@
 <v-app id="app">
   <v-container ><v-layout column>  
   <v-flex >
-    <v-card width=600px>
-      <v-container >
-        <peg-row v-for="row in rows" :cfg="cfg" :pegs="row.pegs" :header="String(row.number)" :key="_.uniqueId()">
-          {{row.answer}}
-        </peg-row>
-        <peg-row :cfg="cfg" :pegs="gs" header=">" :allow_drop="true" v-on:drag_out="drag_out" v-on:drag_in="drag_in">
-              <v-btn v-on:click="addGuess">Go</v-btn>
-        </peg-row>
-        <peg-row :cfg="cfg" :pegs="[1,2,3,4]" header=""></peg-row>
-        <peg-row :cfg="cfg" :pegs="[5,6,7,8]" header=""></peg-row>
-      </v-container>
-    </v-card>
+    <v-card width=600px><mm-board /></v-card>
   </v-flex>
   </v-layout></v-container> 
 </v-app>
