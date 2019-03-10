@@ -1,5 +1,5 @@
-import peg from '/js/components/peg.js';
-import pegrow from '/js/components/pegrow.js';
+import PegItem from '/js/components/PegItem.js';
+import PegRow from '/js/components/PegRow.js';
 
 // returns tuple: (number of exact matches, number of color matches)
 var colorCompare=function(araw,braw) {
@@ -34,8 +34,8 @@ const newSecret=function(cfg) {
 var vm = new Vue({
   el: '#app',
   components: {
-    peg: peg,
-    pegrow: pegrow
+    PegItem,
+    PegRow
   },
   data: {
     cfg: {

@@ -1,6 +1,7 @@
 //A peg: color 0 means undefined
 export default {
-  name: 'peg',
+  // https://vuejs.org/v2/style-guide/#Component-name-casing-in-JS-JSX-strongly-recommended
+  name: 'PegItem',
   template: '\
     <v-avatar :color="cfg.colors[color]" class="elevation-3" style="margin:6px" draggable="true"\
         v-on:dragstart="peg_drag($event)" v-on:dragover="peg_dragover" v-on:drop="peg_drop($event)">\
