@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 """
 Configure python dev-server to handle .wasm-files
 """

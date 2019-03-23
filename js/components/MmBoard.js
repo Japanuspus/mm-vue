@@ -1,7 +1,7 @@
 
 import PegItem from './PegItem.js';
 import PegRow from './PegRow.js';
-import { astring } from '/rust/pkg/rust.js';
+import { astring, Board } from '/rust/pkg/rust.js';
 
 // returns tuple: (number of exact matches, number of color matches)
 var colorCompare=function(araw,braw) {
@@ -50,7 +50,7 @@ export default {
   </peg-row>\
   <peg-row :cfg="cfg" :pegs="[1,2,3,4]" header=""></peg-row>\
   <peg-row :cfg="cfg" :pegs="[5,6,7,8]" header=""></peg-row>\
-  <v-layout align-center row my-3> Output from rust: {{ rust_model }} </v-layout>\
+  <v-layout align-center row my-3> Possible solutions: {{ board.getPossibleCount() }} </v-layout>\
   </v-container>\
   ',
   data: function() { 
@@ -64,7 +64,7 @@ export default {
       rows: [],
       secret: newSecret({n_peg: 4, n_color: 8}),
       gs: Array(4).fill(0),
-      rust_model: astring()
+      board: new Board()
     };
   },
   methods: {
